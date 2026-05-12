@@ -1,69 +1,223 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>3D Room</title>
-  <style>
-    body { margin:0; overflow:hidden; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dream Ladders 3D House Plan</title>
+
+<style>
+    body{
+        margin:0;
+        overflow:hidden;
+        font-family:Arial, sans-serif;
+        background:#111;
+    }
+
+    #info{
+        position:absolute;
+        top:10px;
+        left:10px;
+        color:white;
+        background:rgba(0,0,0,0.6);
+        padding:12px;
+        border-radius:10px;
+        z-index:10;
+        line-height:1.6;
+    }
+
+    canvas{
+        display:block;
+    }
+</style>
 </head>
+
 <body>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<div id="info">
+    <h3>Dream Ladders - 2BHK Plan</h3>
+    Plot: 33ft × 53ft<br>
+    North Facing ↑<br>
+    Use Mouse to Rotate
+</div>
 
-<script>
+<script type="module">
+
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
 const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x20252f);
 
 const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth/window.innerHeight,
-  0.1,
-  1000
+    60,
+    window.innerWidth/window.innerHeight,
+    0.1,
+    1000
 );
 
-const renderer = new THREE.WebGLRenderer({ antialias:true });
-renderer.setSize(window.innerWidth, window.innerHeight);
+camera.position.set(35,30,35);
+
+const renderer = new THREE.WebGLRenderer({
+    antialias:true
+});
+
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.shadowMap.enabled = true;
+
 document.body.appendChild(renderer.domElement);
 
-const floorGeometry = new THREE.PlaneGeometry(10,10);
-const floorMaterial = new THREE.MeshStandardMaterial({
-  color: 0x808080
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+//
+// LIGHTS
+//
+
+const ambient = new THREE.AmbientLight(0xffffff,1.2);
+scene.add(ambient);
+
+const dirLight = new THREE.DirectionalLight(0xffffff,2);
+dirLight.position.set(20,30,10);
+dirLight.castShadow = true;
+scene.add(dirLight);
+
+//
+// FLOOR
+//
+
+const floorGeo = new THREE.PlaneGeometry(28,44);
+const floorMat = new THREE.MeshStandardMaterial({
+    color:0xbdbdbd
 });
 
-const floor = new THREE.Mesh(
-  floorGeometry,
-  floorMaterial
-);
+const floor = new THREE.Mesh(floorGeo,floorMat);
 
 floor.rotation.x = -Math.PI/2;
+floor.receiveShadow = true;
+
 scene.add(floor);
 
-const wallGeometry = new THREE.BoxGeometry(10,3,0.2);
-const wallMaterial = new THREE.MeshStandardMaterial({
-  color: 0xffffff
-});
+//
+// HELPER FUNCTION
+//
 
-const wall = new THREE.Mesh(
-  wallGeometry,
-  wallMaterial
+function createRoom(w,h,d,color,x,y,z){
+
+    const geo = new THREE.BoxGeometry(w,h,d);
+
+    const mat = new THREE.MeshStandardMaterial({
+        color:color
+    });
+
+    const mesh = new THREE.Mesh(geo,mat);
+
+    mesh.position.set(x,y,z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+
+    scene.add(mesh);
+
+    return mesh;
+}
+
+//
+// OUTER WALLS
+//
+
+createRoom(28,3,0.3,0xffffff,0,1.5,-22);
+createRoom(28,3,0.3,0xffffff,0,1.5,22);
+
+createRoom(0.3,3,44,0xffffff,-14,1.5,0);
+createRoom(0.3,3,44,0xffffff,14,1.5,0);
+
+//
+// HALL
+//
+
+createRoom(14,0.2,16,0x4fc3f7,-5,0.1,10);
+
+//
+// BEDROOM 1
+//
+
+createRoom(12,0.2,12,0x81c784,-7,0.1,-10);
+
+//
+// BEDROOM 2
+//
+
+createRoom(11,0.2,12,0xffb74d,7,0.1,-10);
+
+//
+// KITCHEN (SE)
+//
+
+createRoom(10,0.2,10,0xef5350,8,0.1,8);
+
+//
+// STAIRCASE (SW)
+//
+
+createRoom(7,0.2,14,0xab47bc,-10,0.1,-18);
+
+//
+// PARKING
+//
+
+createRoom(10,0.2,15,0x90a4ae,8,0.1,18);
+
+//
+// GRID
+//
+
+const grid = new THREE.GridHelper(60,60);
+scene.add(grid);
+
+//
+// NORTH ARROW
+//
+
+const arrowDir = new THREE.Vector3(0,0,-1);
+
+const arrow = new THREE.ArrowHelper(
+    arrowDir,
+    new THREE.Vector3(0,1,24),
+    6,
+    0xff0000
 );
 
-wall.position.z = -5;
-wall.position.y = 1.5;
+scene.add(arrow);
 
-scene.add(wall);
-
-const light = new THREE.PointLight(0xffffff, 2);
-light.position.set(5,5,5);
-scene.add(light);
-
-camera.position.set(0,3,8);
+//
+// ANIMATION
+//
 
 function animate(){
-  requestAnimationFrame(animate);
-  renderer.render(scene,camera);
+
+    requestAnimationFrame(animate);
+
+    controls.update();
+
+    renderer.render(scene,camera);
 }
 
 animate();
+
+//
+// RESPONSIVE
+//
+
+window.addEventListener('resize',()=>{
+
+    camera.aspect = window.innerWidth/window.innerHeight;
+
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(window.innerWidth,window.innerHeight);
+
+});
+
 </script>
 
 </body>
