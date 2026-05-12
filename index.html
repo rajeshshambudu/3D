@@ -1,110 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Dream Ladders 3D House Plan</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dream Ladders 3D Plan</title>
 
 <style>
-    body{
-        margin:0;
-        overflow:hidden;
-        font-family:Arial, sans-serif;
-        background:#111;
-    }
+body{
+    margin:0;
+    overflow:hidden;
+    background:#111;
+}
 
-    #info{
-        position:absolute;
-        top:10px;
-        left:10px;
-        color:white;
-        background:rgba(0,0,0,0.6);
-        padding:12px;
-        border-radius:10px;
-        z-index:10;
-        line-height:1.6;
-    }
-
-    canvas{
-        display:block;
-    }
+#info{
+    position:absolute;
+    top:10px;
+    left:10px;
+    color:white;
+    background:rgba(0,0,0,0.6);
+    padding:10px;
+    border-radius:8px;
+    z-index:10;
+}
 </style>
 </head>
 
 <body>
 
 <div id="info">
-    <h3>Dream Ladders - 2BHK Plan</h3>
-    Plot: 33ft × 53ft<br>
-    North Facing ↑<br>
-    Use Mouse to Rotate
+    Dream Ladders 3D House Plan<br>
+    North Facing ↑
 </div>
 
-<script type="module">
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+<script>
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x20252f);
 
 const camera = new THREE.PerspectiveCamera(
-    60,
+    75,
     window.innerWidth/window.innerHeight,
     0.1,
     1000
 );
 
-camera.position.set(35,30,35);
-
 const renderer = new THREE.WebGLRenderer({
     antialias:true
 });
 
-renderer.setSize(window.innerWidth,window.innerHeight);
-renderer.shadowMap.enabled = true;
-
+renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-
 //
-// LIGHTS
+// LIGHT
 //
 
-const ambient = new THREE.AmbientLight(0xffffff,1.2);
+const light = new THREE.DirectionalLight(0xffffff, 2);
+light.position.set(10,20,10);
+scene.add(light);
+
+const ambient = new THREE.AmbientLight(0xffffff,1);
 scene.add(ambient);
-
-const dirLight = new THREE.DirectionalLight(0xffffff,2);
-dirLight.position.set(20,30,10);
-dirLight.castShadow = true;
-scene.add(dirLight);
 
 //
 // FLOOR
 //
 
 const floorGeo = new THREE.PlaneGeometry(28,44);
+
 const floorMat = new THREE.MeshStandardMaterial({
-    color:0xbdbdbd
+    color:0x888888,
+    side:THREE.DoubleSide
 });
 
 const floor = new THREE.Mesh(floorGeo,floorMat);
 
-floor.rotation.x = -Math.PI/2;
-floor.receiveShadow = true;
+floor.rotation.x = Math.PI/2;
 
 scene.add(floor);
 
 //
-// HELPER FUNCTION
+// ROOM FUNCTION
 //
 
-function createRoom(w,h,d,color,x,y,z){
+function room(w,d,color,x,z){
 
-    const geo = new THREE.BoxGeometry(w,h,d);
+    const geo = new THREE.BoxGeometry(w,0.5,d);
 
     const mat = new THREE.MeshStandardMaterial({
         color:color
@@ -112,82 +95,54 @@ function createRoom(w,h,d,color,x,y,z){
 
     const mesh = new THREE.Mesh(geo,mat);
 
-    mesh.position.set(x,y,z);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    mesh.position.set(x,0.3,z);
 
     scene.add(mesh);
-
-    return mesh;
 }
-
-//
-// OUTER WALLS
-//
-
-createRoom(28,3,0.3,0xffffff,0,1.5,-22);
-createRoom(28,3,0.3,0xffffff,0,1.5,22);
-
-createRoom(0.3,3,44,0xffffff,-14,1.5,0);
-createRoom(0.3,3,44,0xffffff,14,1.5,0);
 
 //
 // HALL
 //
 
-createRoom(14,0.2,16,0x4fc3f7,-5,0.1,10);
+room(14,16,0x4fc3f7,-5,10);
 
 //
 // BEDROOM 1
 //
 
-createRoom(12,0.2,12,0x81c784,-7,0.1,-10);
+room(12,12,0x81c784,-7,-10);
 
 //
 // BEDROOM 2
 //
 
-createRoom(11,0.2,12,0xffb74d,7,0.1,-10);
+room(11,12,0xffb74d,7,-10);
 
 //
-// KITCHEN (SE)
+// KITCHEN
 //
 
-createRoom(10,0.2,10,0xef5350,8,0.1,8);
+room(10,10,0xef5350,8,8);
 
 //
-// STAIRCASE (SW)
+// STAIRCASE
 //
 
-createRoom(7,0.2,14,0xab47bc,-10,0.1,-18);
+room(7,14,0xab47bc,-10,-18);
 
 //
 // PARKING
 //
 
-createRoom(10,0.2,15,0x90a4ae,8,0.1,18);
+room(10,15,0x90a4ae,8,18);
 
 //
-// GRID
+// CAMERA
 //
 
-const grid = new THREE.GridHelper(60,60);
-scene.add(grid);
+camera.position.set(0,35,35);
 
-//
-// NORTH ARROW
-//
-
-const arrowDir = new THREE.Vector3(0,0,-1);
-
-const arrow = new THREE.ArrowHelper(
-    arrowDir,
-    new THREE.Vector3(0,1,24),
-    6,
-    0xff0000
-);
-
-scene.add(arrow);
+camera.lookAt(0,0,0);
 
 //
 // ANIMATION
@@ -197,7 +152,7 @@ function animate(){
 
     requestAnimationFrame(animate);
 
-    controls.update();
+    scene.rotation.y += 0.002;
 
     renderer.render(scene,camera);
 }
@@ -208,7 +163,7 @@ animate();
 // RESPONSIVE
 //
 
-window.addEventListener('resize',()=>{
+window.addEventListener('resize', ()=>{
 
     camera.aspect = window.innerWidth/window.innerHeight;
 
