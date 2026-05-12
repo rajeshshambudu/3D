@@ -171,17 +171,118 @@ function createRoom(w,d,h,color,x,z){
     scene.add(group);
 }
 
+function createLabel(text,x,y,z){
+
+    const canvas =
+        document.createElement('canvas');
+
+    const context =
+        canvas.getContext('2d');
+
+    canvas.width = 256;
+    canvas.height = 128;
+
+    context.fillStyle = 'white';
+
+    context.font = '28px Arial';
+
+    context.fillText(text,20,64);
+
+    const texture =
+        new THREE.CanvasTexture(canvas);
+
+    const material =
+        new THREE.SpriteMaterial({
+            map:texture
+        });
+
+    const sprite =
+        new THREE.Sprite(material);
+
+    sprite.scale.set(8,4,1);
+
+    sprite.position.set(x,y,z);
+
+    scene.add(sprite);
+}
+
+
+    
 // Rooms
-createRoom(14,11,5,0x4fc3f7,11,14);
+// HALL (North Center)
+createRoom(
+    18,
+    14,
+    5,
+    0x4fc3f7,
+    0,
+    12
+);
 
-createRoom(13,11,5,0xef5350,11,27);
+// KITCHEN (South East)
+createRoom(
+    10,
+    10,
+    5,
+    0xef5350,
+    9,
+    -2
+);
 
-createRoom(12,11,5,0x81c784,-11,-12);
+// BEDROOM 1 (South West)
+createRoom(
+    12,
+    12,
+    5,
+    0x81c784,
+    -8,
+    -10
+);
 
-createRoom(11,11,5,0xffb74d,-11,-23);
+// BEDROOM 2 (South Center)
+createRoom(
+    11,
+    12,
+    5,
+    0xffb74d,
+    7,
+    -12
+);
 
-createRoom(10,11,3,0x90a4ae,11,37);
+// PARKING (North East)
+createRoom(
+    10,
+    15,
+    3,
+    0x90a4ae,
+    11,
+    28
+);
 
+// STAIRCASE (South West Corner)
+createRoom(
+    7,
+    14,
+    5,
+    0xab47bc,
+    -15,
+    -18
+);
+
+createLabel("HALL",0,6,12);
+
+createLabel("KITCHEN",9,6,-2);
+
+createLabel("BEDROOM 1",-8,6,-10);
+
+createLabel("BEDROOM 2",7,6,-12);
+
+createLabel("PARKING",11,4,28);
+
+createLabel("STAIR",-15,6,-18);
+
+
+    
 // Animation
 function animate(){
 
