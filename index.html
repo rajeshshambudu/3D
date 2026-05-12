@@ -1,179 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dream Ladders 3D Plan</title>
-
-<style>
-body{
-    margin:0;
-    overflow:hidden;
-    background:#111;
-}
-
-#info{
-    position:absolute;
-    top:10px;
-    left:10px;
-    color:white;
-    background:rgba(0,0,0,0.6);
-    padding:10px;
-    border-radius:8px;
-    z-index:10;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dream Ladders 3D Pro</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #1a1a2e; font-family: sans-serif; }
+        #info {
+            position: absolute; top: 20px; left: 20px; color: white;
+            background: rgba(0, 0, 0, 0.7); padding: 15px; border-radius: 10px;
+            border-left: 5px solid #4fc3f7; z-index: 10; pointer-events: none;
+        }
+        #controls-hint {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.6); font-size: 12px;
+        }
+    </style>
 </head>
-
 <body>
 
 <div id="info">
-    Dream Ladders 3D House Plan<br>
-    North Facing ↑
+    <strong>Dream Ladders 3D Plan</strong><br>
+    <small>North Facing ↑</small>
 </div>
 
+<div id="controls-hint">Left Click: Rotate | Right Click: Pan | Scroll: Zoom</div>
+
+<!-- Load Three.js and OrbitControls -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
 
 <script>
-
+// --- SCENE SETUP ---
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x20252f);
+scene.background = new THREE.Color(0x1a1a2e);
 
-const camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth/window.innerHeight,
-    0.1,
-    1000
-);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(30, 40, 50);
 
-const renderer = new THREE.WebGLRenderer({
-    antialias:true
-});
-
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-//
-// LIGHT
-//
+// --- CONTROLS ---
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
 
-const light = new THREE.DirectionalLight(0xffffff, 2);
-light.position.set(10,20,10);
-scene.add(light);
+// --- LIGHTING ---
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+scene.add(ambientLight);
 
-const ambient = new THREE.AmbientLight(0xffffff,1);
-scene.add(ambient);
+const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+sunLight.position.set(20, 50, 10);
+scene.add(sunLight);
 
-//
-// FLOOR
-//
+// --- FLOOR BASE ---
+const floorGeo = new THREE.PlaneGeometry(35, 55);
+const floorMat = new THREE.MeshStandardMaterial({ color: 0x2d3436, side: THREE.DoubleSide });
+const floorBase = new THREE.Mesh(floorGeo, floorMat);
+floorBase.rotation.x = Math.PI / 2;
+scene.add(floorBase);
 
-const floorGeo = new THREE.PlaneGeometry(28,44);
+// --- HELPER FUNCTION: CREATE ROOM & WALLS ---
+function createRoom(w, d, h, color, x, z, name) {
+    const group = new THREE.Group();
 
-const floorMat = new THREE.MeshStandardMaterial({
-    color:0x888888,
-    side:THREE.DoubleSide
-});
+    // Floor Mesh
+    const roomGeo = new THREE.BoxGeometry(w, 0.2, d);
+    const roomMat = new THREE.MeshStandardMaterial({ color: color });
+    const roomMesh = new THREE.Mesh(roomGeo, roomMat);
+    group.add(roomMesh);
 
-const floor = new THREE.Mesh(floorGeo,floorMat);
+    // Wall logic - Thick lines to simulate walls
+    const wallThick = 0.4;
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
 
-floor.rotation.x = Math.PI/2;
+    // Back Wall
+    const bw = new THREE.Mesh(new THREE.BoxGeometry(w, h, wallThick), wallMat);
+    bw.position.set(0, h/2, -d/2);
+    group.add(bw);
 
-scene.add(floor);
+    // Left Wall
+    const lw = new THREE.Mesh(new THREE.BoxGeometry(wallThick, h, d), wallMat);
+    lw.position.set(-w/2, h/2, 0);
+    group.add(lw);
 
-//
-// ROOM FUNCTION
-//
+    // Outline/Edges for the aesthetic
+    const edges = new THREE.EdgesGeometry(roomGeo);
+    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
+    roomMesh.add(line);
 
-function room(w,d,color,x,z){
-
-    const geo = new THREE.BoxGeometry(w,0.5,d);
-
-    const mat = new THREE.MeshStandardMaterial({
-        color:color
-    });
-
-    const mesh = new THREE.Mesh(geo,mat);
-
-    mesh.position.set(x,0.3,z);
-
-    scene.add(mesh);
+    group.position.set(x, 0.1, z);
+    scene.add(group);
 }
 
-//
-// HALL
-//
+// --- DEFINE THE HOUSE LAYOUT ---
+// createRoom(width, depth, wallHeight, color, x, z)
 
-room(14,16,0x4fc3f7,-5,10);
+// Main Hall
+createRoom(14, 16, 4, 0x4fc3f7, -5, 10);
 
-//
-// BEDROOM 1
-//
+// Kitchen (North-East corner)
+createRoom(10, 10, 4, 0xef5350, 8, 8);
 
-room(12,12,0x81c784,-7,-10);
+// Bedroom 1 (Master)
+createRoom(12, 12, 4, 0x81c784, -7, -10);
 
-//
-// BEDROOM 2
-//
+// Bedroom 2
+createRoom(11, 12, 4, 0xffb74d, 7, -10);
 
-room(11,12,0xffb74d,7,-10);
+// Staircase area
+createRoom(7, 14, 2, 0xab47bc, -10, -18);
 
-//
-// KITCHEN
-//
+// Parking (Open walls - lower height)
+createRoom(10, 15, 1, 0x90a4ae, 8, 18);
 
-room(10,10,0xef5350,8,8);
-
-//
-// STAIRCASE
-//
-
-room(7,14,0xab47bc,-10,-18);
-
-//
-// PARKING
-//
-
-room(10,15,0x90a4ae,8,18);
-
-//
-// CAMERA
-//
-
-camera.position.set(0,35,35);
-
-camera.lookAt(0,0,0);
-
-//
-// ANIMATION
-//
-
-function animate(){
-
+// --- ANIMATION LOOP ---
+function animate() {
     requestAnimationFrame(animate);
-
-    scene.rotation.y += 0.002;
-
-    renderer.render(scene,camera);
+    controls.update(); // Required for damping
+    renderer.render(scene, camera);
 }
 
 animate();
 
-//
-// RESPONSIVE
-//
-
-window.addEventListener('resize', ()=>{
-
-    camera.aspect = window.innerWidth/window.innerHeight;
-
+// --- RESPONSIVE RESIZE ---
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
-
-    renderer.setSize(window.innerWidth,window.innerHeight);
-
+    renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
 </script>
-
 </body>
 </html>
