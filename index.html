@@ -2,48 +2,54 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
 <title>Dream Ladders 3D</title>
 
 <style>
-    body{
-        margin:0;
-        overflow:hidden;
-        background:#111;
-        font-family:Arial;
-    }
 
-    #info{
-        position:absolute;
-        top:10px;
-        left:10px;
-        color:white;
-        background:rgba(0,0,0,0.7);
-        padding:10px;
-        border-radius:6px;
-        z-index:10;
-    }
+body{
+    margin:0;
+    overflow:hidden;
+    background:#111;
+    touch-action:none;
+    font-family:Arial;
+}
+
+canvas{
+    display:block;
+}
+
+#info{
+    position:absolute;
+    top:10px;
+    left:10px;
+    color:white;
+    background:rgba(0,0,0,0.7);
+    padding:10px 14px;
+    border-radius:8px;
+    z-index:10;
+    font-size:14px;
+}
+
 </style>
 </head>
 
 <body>
 
 <div id="info">
-    <b>Dream Ladders 3D</b><br>
-    Mouse Rotate + Zoom
+Dream Ladders 3D<br>
+Touch / Mouse to Rotate
 </div>
 
-<script type="module">
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
-import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
-
-import { OrbitControls } from "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js";
-
+<script>
 
 // Scene
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111111);
-
+scene.background = new THREE.Color(0x222222);
 
 // Camera
 const camera = new THREE.PerspectiveCamera(
@@ -55,25 +61,33 @@ const camera = new THREE.PerspectiveCamera(
 
 camera.position.set(30,25,30);
 
-
 // Renderer
 const renderer = new THREE.WebGLRenderer({
     antialias:true
 });
 
+renderer.setPixelRatio(window.devicePixelRatio);
+
 renderer.setSize(window.innerWidth,window.innerHeight);
 
 document.body.appendChild(renderer.domElement);
 
-
 // Controls
-const controls = new OrbitControls(camera,renderer.domElement);
+const controls = new THREE.OrbitControls(
+    camera,
+    renderer.domElement
+);
 
 controls.enableDamping = true;
+controls.dampingFactor = 0.05;
 
+controls.enablePan = true;
+
+controls.minDistance = 10;
+controls.maxDistance = 100;
 
 // Lights
-const ambient = new THREE.AmbientLight(0xffffff,0.8);
+const ambient = new THREE.AmbientLight(0xffffff,0.7);
 scene.add(ambient);
 
 const light = new THREE.DirectionalLight(0xffffff,1);
@@ -82,67 +96,93 @@ light.position.set(20,30,20);
 
 scene.add(light);
 
+// Ground
+const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(200,200),
+    new THREE.MeshPhongMaterial({
+        color:0x333333
+    })
+);
+
+ground.rotation.x = -Math.PI/2;
+ground.position.y = -0.2;
+
+scene.add(ground);
 
 // Grid
-const grid = new THREE.GridHelper(100,100);
+const grid = new THREE.GridHelper(200,100);
+
 scene.add(grid);
 
-
-// Room function
+// Room Function
 function createRoom(w,d,h,color,x,z){
 
     const group = new THREE.Group();
 
-    // floor
+    // Floor
     const floor = new THREE.Mesh(
-        new THREE.BoxGeometry(w,0.2,d),
-        new THREE.MeshStandardMaterial({color})
+        new THREE.BoxGeometry(w,0.3,d),
+        new THREE.MeshPhongMaterial({
+            color:color
+        })
     );
 
     group.add(floor);
 
-    // walls
-    const wallMaterial = new THREE.MeshStandardMaterial({
-        color:0xdddddd,
+    // Wall Material
+    const wallMat = new THREE.MeshPhongMaterial({
+        color:0xffffff,
         transparent:true,
         opacity:0.8
     });
 
-    // back wall
+    // Back Wall
     const backWall = new THREE.Mesh(
-        new THREE.BoxGeometry(w,h,0.2),
-        wallMaterial
+        new THREE.BoxGeometry(w,h,0.3),
+        wallMat
     );
 
     backWall.position.set(0,h/2,-d/2);
 
     group.add(backWall);
 
-    // left wall
+    // Left Wall
     const leftWall = new THREE.Mesh(
-        new THREE.BoxGeometry(0.2,h,d),
-        wallMaterial
+        new THREE.BoxGeometry(0.3,h,d),
+        wallMat
     );
 
     leftWall.position.set(-w/2,h/2,0);
 
     group.add(leftWall);
 
+    // Right Wall
+    const rightWall = new THREE.Mesh(
+        new THREE.BoxGeometry(0.3,h,d),
+        wallMat
+    );
+
+    rightWall.position.set(w/2,h/2,0);
+
+    group.add(rightWall);
+
     group.position.set(x,0,z);
 
     scene.add(group);
 }
 
-
-// House
+// Rooms
 createRoom(14,16,5,0x4fc3f7,-5,10);
+
 createRoom(10,10,5,0xef5350,8,8);
+
 createRoom(12,12,5,0x81c784,-7,-10);
+
 createRoom(11,12,5,0xffb74d,7,-10);
+
 createRoom(10,15,3,0x90a4ae,8,18);
 
-
-// Animate
+// Animation
 function animate(){
 
     requestAnimationFrame(animate);
@@ -154,15 +194,18 @@ function animate(){
 
 animate();
 
-
 // Resize
 window.addEventListener("resize",()=>{
 
-    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.aspect =
+        window.innerWidth/window.innerHeight;
 
     camera.updateProjectionMatrix();
 
-    renderer.setSize(window.innerWidth,window.innerHeight);
+    renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+    );
 
 });
 
