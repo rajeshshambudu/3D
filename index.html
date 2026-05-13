@@ -4,18 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Dream Ladders 3D - Production</title>
+<title>Dream Ladders LIVE 3D</title>
 
 <style>
 body { margin:0; overflow:hidden; background:#111; }
 canvas { display:block; }
 
-#ui{
+#ui {
     position:absolute;
     top:10px;
     left:10px;
     color:white;
-    background:rgba(0,0,0,0.6);
+    background:rgba(0,0,0,0.7);
     padding:10px;
     font-family:Arial;
     font-size:13px;
@@ -35,115 +35,90 @@ canvas { display:block; }
 
 // ================= SCENE =================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1a1a1a);
+scene.background = new THREE.Color(0x1c1c1c);
 
 // ================= CAMERA =================
-const camera = new THREE.PerspectiveCamera(
-    60,
-    window.innerWidth/window.innerHeight,
-    0.1,
-    2000
-);
-
-// IMPORTANT: better default view for architecture
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
 camera.position.set(40, 40, 40);
 
 // ================= RENDERER =================
 const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
 // ================= CONTROLS =================
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.minDistance = 10;
-controls.maxDistance = 200;
 
-// ================= LIGHTING (FIXED) =================
+// ================= LIGHT =================
 scene.add(new THREE.AmbientLight(0xffffff, 1.2));
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-dirLight.position.set(50, 80, 50);
-scene.add(dirLight);
+const light = new THREE.DirectionalLight(0xffffff, 1.5);
+light.position.set(50,80,50);
+scene.add(light);
 
 // ================= GROUND =================
 const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(300, 300),
+    new THREE.PlaneGeometry(300,300),
     new THREE.MeshPhongMaterial({ color:0x2a2a2a })
 );
 ground.rotation.x = -Math.PI/2;
 scene.add(ground);
 
-// ================= GRID =================
 scene.add(new THREE.GridHelper(300, 100));
 
-// ================= DATA =================
+// ================= STATE =================
+let roomObjects = [];
 let rooms = [];
-let objects = [];
 
-// ================= SAFE FALLBACK DATA =================
-function getFallbackData(){
-    return {
-        rooms: [
-            { name:"HALL", w:18, d:14, h:5, x:0, z:12 },
-            { name:"KITCHEN", w:10, d:10, h:5, x:15, z:-5 },
-            { name:"BEDROOM", w:12, d:12, h:5, x:-15, z:-10 },
-            { name:"PARKING", w:14, d:16, h:3, x:20, z:25 }
-        ]
-    };
+// ================= CLEAN SCENE =================
+function clearRooms(){
+    roomObjects.forEach(obj => scene.remove(obj));
+    roomObjects = [];
 }
 
-// ================= ROOM CREATOR =================
+// ================= ROOM =================
 function createRoom(r){
 
     const group = new THREE.Group();
 
-    // FLOOR (always visible)
     const floor = new THREE.Mesh(
         new THREE.BoxGeometry(r.w, 0.3, r.d),
-        new THREE.MeshPhongMaterial({
-            color: 0x4fc3f7,
-            side: THREE.DoubleSide
-        })
+        new THREE.MeshPhongMaterial({ color:0x4fc3f7 })
     );
-    floor.position.y = 0;
+
     group.add(floor);
 
-    // WALL MATERIAL (strong visibility fix)
     const wallMat = new THREE.MeshPhongMaterial({
-        color: 0xffffff,
-        transparent: false
+        color:0xffffff
     });
 
     const h = r.h;
 
     const walls = [
-        { x:0, y:h/2, z:-r.d/2, w:r.w, h, d:0.4 },
-        { x:0, y:h/2, z: r.d/2, w:r.w, h, d:0.4 },
-        { x:-r.w/2, y:h/2, z:0, w:0.4, h, d:r.d },
-        { x: r.w/2, y:h/2, z:0, w:0.4, h, d:r.d }
+        [0, h/2, -r.d/2, r.w, h, 0.3],
+        [0, h/2,  r.d/2, r.w, h, 0.3],
+        [-r.w/2, h/2, 0, 0.3, h, r.d],
+        [ r.w/2, h/2, 0, 0.3, h, r.d],
     ];
 
     walls.forEach(w => {
         const mesh = new THREE.Mesh(
-            new THREE.BoxGeometry(w.w, w.h, w.d),
+            new THREE.BoxGeometry(w[3], w[4], w[5]),
             wallMat
         );
-        mesh.position.set(w.x, w.y, w.z);
+        mesh.position.set(w[0], w[1], w[2]);
         group.add(mesh);
     });
 
     group.position.set(r.x, 0, r.z);
 
     scene.add(group);
-    objects.push(group);
+    roomObjects.push(group);
 }
 
 // ================= LABEL =================
 function createLabel(text,x,y,z){
-
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
@@ -154,93 +129,73 @@ function createLabel(text,x,y,z){
     ctx.font = "28px Arial";
     ctx.fillText(text, 20, 70);
 
-    const texture = new THREE.CanvasTexture(canvas);
-    const mat = new THREE.SpriteMaterial({ map:texture });
+    const tex = new THREE.CanvasTexture(canvas);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex }));
 
-    const sprite = new THREE.Sprite(mat);
     sprite.position.set(x,y,z);
     sprite.scale.set(10,5,1);
 
     scene.add(sprite);
+    roomObjects.push(sprite);
 }
 
-// ================= CAMERA AUTO FIT (IMPORTANT FIX) =================
+// ================= CAMERA FIT =================
 function frameScene(){
-
     const box = new THREE.Box3().setFromObject(scene);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
 
-    const maxDim = Math.max(size.x, size.y, size.z);
+    const max = Math.max(size.x, size.y, size.z);
 
-    camera.position.set(
-        center.x + maxDim,
-        center.y + maxDim,
-        center.z + maxDim
-    );
-
+    camera.position.set(center.x + max, center.y + max, center.z + max);
     controls.target.copy(center);
     controls.update();
 }
 
-// ================= COST ENGINE =================
-function calculateCost(r){
-    const floor = r.w * r.d * 1200;
-    const walls = 2*(r.w + r.d) * r.h * 400;
-    return floor + walls;
+// ================= COST =================
+function cost(r){
+    return (r.w*r.d*1200) + (2*(r.w+r.d)*r.h*400);
 }
 
-// ================= ADJACENCY =================
-function isAdjacent(a,b){
-    return Math.abs(a.x - b.x) < (a.w + b.w)/2 &&
-           Math.abs(a.z - b.z) < (a.d + b.d)/2;
-}
-
-// ================= DATA LOADER (ROBUST) =================
+// ================= LOAD DATA (NO CACHE FIX) =================
 async function loadData(){
 
-    let data;
-
     try {
-        const url = "YOUR_GOOGLE_SCRIPT_URL";
-        const res = await fetch(url);
+        const url = "https://script.google.com/macros/s/AKfycbxjY8vWuMhIesGGfzRCBCxDfEYjm5NMa_jYJtLBW3UH6mLV-tDfvqnwoIQx2wFZJug/exec";
 
-        if(!res.ok) throw new Error("API ERROR");
+        const res = await fetch(url + "?t=" + Date.now(), {
+            cache: "no-store"
+        });
 
-        data = await res.json();
+        const data = await res.json();
+        rooms = data.rooms;
 
-    } catch(err) {
-        console.warn("Using fallback data:", err);
-        data = getFallbackData();
+    } catch(e){
+        console.warn("Fallback used");
+        rooms = [
+            { name:"HALL", w:18, d:14, h:5, x:0, z:12 },
+            { name:"KITCHEN", w:10, d:10, h:5, x:15, z:-5 }
+        ];
     }
 
-    rooms = data.rooms;
+    clearRooms();
 
-    // CREATE SCENE
+    let total = 0;
+
     rooms.forEach(r => {
         createRoom(r);
         createLabel(r.name, r.x, 6, r.z);
+        total += cost(r);
     });
 
-    // COST TOTAL
-    let total = 0;
-    rooms.forEach(r => total += calculateCost(r));
-
     document.getElementById("ui").innerHTML =
-        `Rooms: ${rooms.length}<br>Total Cost: ₹${total}`;
+        "Rooms: " + rooms.length + "<br>Total Cost: ₹" + total;
 
-    // ADJACENCY LOG
-    for(let i=0;i<rooms.length;i++){
-        for(let j=i+1;j<rooms.length;j++){
-            if(isAdjacent(rooms[i], rooms[j])){
-                console.log("Connected:", rooms[i].name, rooms[j].name);
-            }
-        }
-    }
-
-    // IMPORTANT FIX → FRAME CAMERA AFTER LOAD
     frameScene();
 }
+
+// ================= AUTO REFRESH =================
+setInterval(loadData, 5000);
 
 // ================= START =================
 loadData();
