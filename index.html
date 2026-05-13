@@ -1,175 +1,702 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dream Ladders 3D Plan</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title>Dream Ladders CAD</title>
 
 <style>
+
 body{
     margin:0;
     overflow:hidden;
+    font-family:Arial, sans-serif;
     background:#111;
 }
 
-#info{
+canvas{
+    display:block;
+}
+
+/* LEFT PANEL */
+
+#panel{
     position:absolute;
     top:10px;
     left:10px;
+    width:220px;
+
+    background:rgba(0,0,0,0.82);
     color:white;
-    background:rgba(0,0,0,0.6);
-    padding:10px;
-    border-radius:8px;
+
+    padding:14px;
+    border-radius:12px;
+
     z-index:10;
 }
+
+#panel h2{
+    margin-top:0;
+    font-size:18px;
+}
+
+input{
+    width:100%;
+    margin:5px 0;
+    padding:8px;
+    border:none;
+    border-radius:6px;
+    box-sizing:border-box;
+}
+
+button{
+    width:100%;
+    padding:10px;
+    margin-top:8px;
+
+    border:none;
+    border-radius:8px;
+
+    background:#4fc3f7;
+    color:#111;
+
+    font-weight:bold;
+    cursor:pointer;
+}
+
+button:hover{
+    opacity:0.9;
+}
+
+#info{
+    margin-top:10px;
+    font-size:13px;
+    line-height:1.5;
+}
+
+#help{
+    position:absolute;
+    right:10px;
+    top:10px;
+
+    background:rgba(0,0,0,0.7);
+    color:white;
+
+    padding:12px;
+    border-radius:10px;
+
+    font-size:13px;
+    z-index:10;
+}
+
 </style>
 </head>
 
 <body>
 
-<div id="info">
-    Dream Ladders 3D House Plan<br>
-    North Facing ↑
+<div id="panel">
+
+    <h2>Dream Ladders CAD</h2>
+
+    <input id="name" placeholder="Room Name" />
+    <input id="w" placeholder="Width" type="number" />
+    <input id="d" placeholder="Depth" type="number" />
+    <input id="h" placeholder="Height" type="number" />
+    <input id="x" placeholder="X Position" type="number" />
+    <input id="z" placeholder="Z Position" type="number" />
+
+    <button onclick="addRoom()">Add Room</button>
+
+    <div id="info">
+        Rooms: 0<br>
+        Total Cost: ₹0
+    </div>
+
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<div id="help">
+    🖱️ Drag Rooms<br>
+    🎯 Snap Grid Enabled<br>
+    🔄 Orbit Around Scene
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
 <script>
 
+///////////////////////////////////////////////////////////
+// 1. SCENE
+///////////////////////////////////////////////////////////
+
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x20252f);
+scene.background = new THREE.Color(0x1b1b1b);
+
+///////////////////////////////////////////////////////////
+// 2. CAMERA
+///////////////////////////////////////////////////////////
 
 const camera = new THREE.PerspectiveCamera(
-    75,
+    60,
     window.innerWidth/window.innerHeight,
     0.1,
-    1000
+    3000
 );
+
+camera.position.set(45,45,45);
+
+///////////////////////////////////////////////////////////
+// 3. RENDERER
+///////////////////////////////////////////////////////////
 
 const renderer = new THREE.WebGLRenderer({
     antialias:true
 });
 
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+
 document.body.appendChild(renderer.domElement);
 
-//
-// LIGHT
-//
+///////////////////////////////////////////////////////////
+// 4. CONTROLS
+///////////////////////////////////////////////////////////
 
-const light = new THREE.DirectionalLight(0xffffff, 2);
-light.position.set(10,20,10);
-scene.add(light);
+const controls = new THREE.OrbitControls(
+    camera,
+    renderer.domElement
+);
 
-const ambient = new THREE.AmbientLight(0xffffff,1);
-scene.add(ambient);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
 
-//
-// FLOOR
-//
+///////////////////////////////////////////////////////////
+// 5. LIGHTS
+///////////////////////////////////////////////////////////
 
-const floorGeo = new THREE.PlaneGeometry(28,44);
+scene.add(new THREE.AmbientLight(0xffffff, 1.2));
 
-const floorMat = new THREE.MeshStandardMaterial({
-    color:0x888888,
-    side:THREE.DoubleSide
-});
+const dir = new THREE.DirectionalLight(0xffffff, 1.5);
+dir.position.set(50,80,50);
 
-const floor = new THREE.Mesh(floorGeo,floorMat);
+scene.add(dir);
 
-floor.rotation.x = Math.PI/2;
+///////////////////////////////////////////////////////////
+// 6. GROUND
+///////////////////////////////////////////////////////////
 
-scene.add(floor);
+const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(500,500),
+    new THREE.MeshPhongMaterial({
+        color:0x2a2a2a
+    })
+);
 
-//
-// ROOM FUNCTION
-//
+ground.rotation.x = -Math.PI/2;
 
-function room(w,d,color,x,z){
+scene.add(ground);
 
-    const geo = new THREE.BoxGeometry(w,0.5,d);
+///////////////////////////////////////////////////////////
+// 7. GRID
+///////////////////////////////////////////////////////////
 
-    const mat = new THREE.MeshStandardMaterial({
-        color:color
-    });
+const grid = new THREE.GridHelper(500,100);
 
-    const mesh = new THREE.Mesh(geo,mat);
+scene.add(grid);
 
-    mesh.position.set(x,0.3,z);
+///////////////////////////////////////////////////////////
+// 8. STATE
+///////////////////////////////////////////////////////////
 
-    scene.add(mesh);
+let rooms = [];
+let roomObjects = [];
+
+///////////////////////////////////////////////////////////
+// 9. SNAP GRID
+///////////////////////////////////////////////////////////
+
+const GRID = 2;
+
+function snap(v){
+    return Math.round(v / GRID) * GRID;
 }
 
-//
-// HALL
-//
+///////////////////////////////////////////////////////////
+// 10. COST ENGINE
+///////////////////////////////////////////////////////////
 
-room(14,16,0x4fc3f7,-5,10);
+function calculateCost(r){
 
-//
-// BEDROOM 1
-//
+    const floor =
+        r.w * r.d * 1200;
 
-room(12,12,0x81c784,-7,-10);
+    const walls =
+        2 * (r.w + r.d) * r.h * 400;
 
-//
-// BEDROOM 2
-//
+    return floor + walls;
+}
 
-room(11,12,0xffb74d,7,-10);
+///////////////////////////////////////////////////////////
+// 11. ADJACENCY ENGINE
+///////////////////////////////////////////////////////////
 
-//
-// KITCHEN
-//
+function checkAdjacency(){
 
-room(10,10,0xef5350,8,8);
+    console.clear();
 
-//
-// STAIRCASE
-//
+    for(let i=0;i<rooms.length;i++){
 
-room(7,14,0xab47bc,-10,-18);
+        for(let j=i+1;j<rooms.length;j++){
 
-//
-// PARKING
-//
+            const a = rooms[i];
+            const b = rooms[j];
 
-room(10,15,0x90a4ae,8,18);
+            const adjacent =
+                Math.abs(a.x - b.x) <
+                (a.w + b.w)/2 &&
+                Math.abs(a.z - b.z) <
+                (a.d + b.d)/2;
 
-//
-// CAMERA
-//
+            if(adjacent){
 
-camera.position.set(0,35,35);
+                console.log(
+                    a.name + " ↔ " + b.name
+                );
+            }
+        }
+    }
+}
 
-camera.lookAt(0,0,0);
+///////////////////////////////////////////////////////////
+// 12. LABEL
+///////////////////////////////////////////////////////////
 
-//
-// ANIMATION
-//
+function createLabel(text){
+
+    const canvas =
+        document.createElement("canvas");
+
+    const ctx =
+        canvas.getContext("2d");
+
+    canvas.width = 256;
+    canvas.height = 128;
+
+    ctx.fillStyle = "white";
+    ctx.font = "28px Arial";
+
+    ctx.fillText(text,20,70);
+
+    const texture =
+        new THREE.CanvasTexture(canvas);
+
+    const material =
+        new THREE.SpriteMaterial({
+            map:texture
+        });
+
+    const sprite =
+        new THREE.Sprite(material);
+
+    sprite.scale.set(10,5,1);
+
+    return sprite;
+}
+
+///////////////////////////////////////////////////////////
+// 13. ROOM CREATOR
+///////////////////////////////////////////////////////////
+
+function createRoom(r){
+
+    const group = new THREE.Group();
+
+    ///////////////////////////////////////////////////////
+    // FLOOR
+    ///////////////////////////////////////////////////////
+
+    const floor = new THREE.Mesh(
+
+        new THREE.BoxGeometry(
+            r.w,
+            0.3,
+            r.d
+        ),
+
+        new THREE.MeshPhongMaterial({
+            color:0x4fc3f7
+        })
+    );
+
+    group.add(floor);
+
+    ///////////////////////////////////////////////////////
+    // WALLS
+    ///////////////////////////////////////////////////////
+
+    const wallMat =
+        new THREE.MeshPhongMaterial({
+            color:0xffffff
+        });
+
+    const h = r.h;
+
+    const walls = [
+
+        [0, h/2, -r.d/2, r.w, h, 0.3],
+        [0, h/2,  r.d/2, r.w, h, 0.3],
+
+        [-r.w/2, h/2, 0, 0.3, h, r.d],
+        [ r.w/2, h/2, 0, 0.3, h, r.d]
+
+    ];
+
+    walls.forEach(w=>{
+
+        const mesh = new THREE.Mesh(
+
+            new THREE.BoxGeometry(
+                w[3],
+                w[4],
+                w[5]
+            ),
+
+            wallMat
+        );
+
+        mesh.position.set(
+            w[0],
+            w[1],
+            w[2]
+        );
+
+        group.add(mesh);
+
+    });
+
+    ///////////////////////////////////////////////////////
+    // LABEL
+    ///////////////////////////////////////////////////////
+
+    const label =
+        createLabel(r.name);
+
+    label.position.set(0,h+1,0);
+
+    group.add(label);
+
+    ///////////////////////////////////////////////////////
+    // POSITION
+    ///////////////////////////////////////////////////////
+
+    group.position.set(r.x,0,r.z);
+
+    ///////////////////////////////////////////////////////
+    // USER DATA
+    ///////////////////////////////////////////////////////
+
+    group.userData.room = r;
+
+    ///////////////////////////////////////////////////////
+    // SCENE
+    ///////////////////////////////////////////////////////
+
+    scene.add(group);
+
+    roomObjects.push(group);
+}
+
+///////////////////////////////////////////////////////////
+// 14. RENDER ALL
+///////////////////////////////////////////////////////////
+
+function rerender(){
+
+    roomObjects.forEach(o=>{
+        scene.remove(o);
+    });
+
+    roomObjects = [];
+
+    let total = 0;
+
+    rooms.forEach(r=>{
+
+        createRoom(r);
+
+        total += calculateCost(r);
+
+    });
+
+    document.getElementById("info").innerHTML =
+        "Rooms: " + rooms.length +
+        "<br>Total Cost: ₹" + total;
+
+    checkAdjacency();
+
+    frameScene();
+}
+
+///////////////////////////////////////////////////////////
+// 15. AUTO CAMERA FIT
+///////////////////////////////////////////////////////////
+
+function frameScene(){
+
+    if(roomObjects.length === 0) return;
+
+    const box =
+        new THREE.Box3();
+
+    roomObjects.forEach(o=>{
+        box.expandByObject(o);
+    });
+
+    const size =
+        box.getSize(new THREE.Vector3());
+
+    const center =
+        box.getCenter(new THREE.Vector3());
+
+    const max =
+        Math.max(size.x,size.y,size.z);
+
+    camera.position.set(
+        center.x + max,
+        center.y + max,
+        center.z + max
+    );
+
+    controls.target.copy(center);
+
+    controls.update();
+}
+
+///////////////////////////////////////////////////////////
+// 16. ADD ROOM
+///////////////////////////////////////////////////////////
+
+function addRoom(){
+
+    const room = {
+
+        name:
+            document.getElementById("name").value || "ROOM",
+
+        w:
+            Number(document.getElementById("w").value) || 10,
+
+        d:
+            Number(document.getElementById("d").value) || 10,
+
+        h:
+            Number(document.getElementById("h").value) || 5,
+
+        x:
+            snap(
+                Number(document.getElementById("x").value) || 0
+            ),
+
+        z:
+            snap(
+                Number(document.getElementById("z").value) || 0
+            )
+    };
+
+    rooms.push(room);
+
+    rerender();
+}
+
+///////////////////////////////////////////////////////////
+// 17. DRAG SYSTEM
+///////////////////////////////////////////////////////////
+
+const raycaster =
+    new THREE.Raycaster();
+
+const mouse =
+    new THREE.Vector2();
+
+let selected = null;
+let dragging = false;
+
+///////////////////////////////////////////////////////////
+// POINTER DOWN
+///////////////////////////////////////////////////////////
+
+window.addEventListener("pointerdown",(e)=>{
+
+    mouse.x =
+        (e.clientX/window.innerWidth)*2 - 1;
+
+    mouse.y =
+        -(e.clientY/window.innerHeight)*2 + 1;
+
+    raycaster.setFromCamera(mouse,camera);
+
+    const intersects =
+        raycaster.intersectObjects(
+            roomObjects,
+            true
+        );
+
+    if(intersects.length > 0){
+
+        let obj =
+            intersects[0].object;
+
+        while(
+            obj.parent &&
+            !obj.userData.room
+        ){
+            obj = obj.parent;
+        }
+
+        if(obj.userData.room){
+
+            selected = obj;
+            dragging = true;
+
+            controls.enabled = false;
+        }
+    }
+
+});
+
+///////////////////////////////////////////////////////////
+// POINTER MOVE
+///////////////////////////////////////////////////////////
+
+window.addEventListener("pointermove",(e)=>{
+
+    if(!dragging || !selected) return;
+
+    mouse.x =
+        (e.clientX/window.innerWidth)*2 - 1;
+
+    mouse.y =
+        -(e.clientY/window.innerHeight)*2 + 1;
+
+    raycaster.setFromCamera(mouse,camera);
+
+    const plane =
+        new THREE.Plane(
+            new THREE.Vector3(0,1,0),
+            0
+        );
+
+    const point =
+        new THREE.Vector3();
+
+    raycaster.ray.intersectPlane(
+        plane,
+        point
+    );
+
+    selected.position.x =
+        snap(point.x);
+
+    selected.position.z =
+        snap(point.z);
+
+    ///////////////////////////////////////////////////////
+    // UPDATE STATE
+    ///////////////////////////////////////////////////////
+
+    const room =
+        selected.userData.room;
+
+    room.x = selected.position.x;
+    room.z = selected.position.z;
+
+    checkAdjacency();
+
+});
+
+///////////////////////////////////////////////////////////
+// POINTER UP
+///////////////////////////////////////////////////////////
+
+window.addEventListener("pointerup",()=>{
+
+    dragging = false;
+    selected = null;
+
+    controls.enabled = true;
+
+});
+
+///////////////////////////////////////////////////////////
+// 18. DEMO ROOMS
+///////////////////////////////////////////////////////////
+
+rooms.push(
+    {
+        name:"HALL",
+        w:18,
+        d:14,
+        h:5,
+        x:0,
+        z:0
+    }
+);
+
+rooms.push(
+    {
+        name:"KITCHEN",
+        w:10,
+        d:10,
+        h:5,
+        x:20,
+        z:0
+    }
+);
+
+rooms.push(
+    {
+        name:"BEDROOM",
+        w:12,
+        d:12,
+        h:5,
+        x:-20,
+        z:0
+    }
+);
+
+rerender();
+
+///////////////////////////////////////////////////////////
+// 19. LOOP
+///////////////////////////////////////////////////////////
 
 function animate(){
 
     requestAnimationFrame(animate);
 
-    scene.rotation.y += 0.002;
+    controls.update();
 
     renderer.render(scene,camera);
 }
 
 animate();
 
-//
-// RESPONSIVE
-//
+///////////////////////////////////////////////////////////
+// 20. RESIZE
+///////////////////////////////////////////////////////////
 
-window.addEventListener('resize', ()=>{
+window.addEventListener("resize",()=>{
 
-    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.aspect =
+        window.innerWidth/window.innerHeight;
 
     camera.updateProjectionMatrix();
 
-    renderer.setSize(window.innerWidth,window.innerHeight);
+    renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+    );
 
 });
 
